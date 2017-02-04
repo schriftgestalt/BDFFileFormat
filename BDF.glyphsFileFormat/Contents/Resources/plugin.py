@@ -198,10 +198,16 @@ class BDFFileFormat(FileFormatPlugin):
 		layer = pixel.layers[0]
 		layer.width = 10
 		path = GSPath()
-		path.addNodeWithPosition_type_connection_(NSPoint(10, 0), 1, GSSHARP)
-		path.addNodeWithPosition_type_connection_(NSPoint(10, 10), 1, GSSHARP)
-		path.addNodeWithPosition_type_connection_(NSPoint(0, 10), 1, GSSHARP)
-		path.addNodeWithPosition_type_connection_(NSPoint(0, 0), 1, GSSHARP)
+		
+		Node = GSNode(NSPoint(10, 0), LINE)
+		path.nodes.append(Node)
+		Node = GSNode(NSPoint(10, 10), LINE)
+		path.nodes.append(Node)
+		Node = GSNode(NSPoint(0, 10), LINE)
+		path.nodes.append(Node)
+		Node = GSNode(NSPoint(0, 0), LINE)
+		path.nodes.append(Node)
+		
 		path.closed = True
 		layer.paths.append(path)
 	
