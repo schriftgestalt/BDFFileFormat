@@ -228,7 +228,7 @@ class BDFFileFormat(FileFormatPlugin):
 		layer.enableFutureUpdates()
 	
 	def readGlyph(self, glyph, master, file):
-		layer = GSLayer() # glyph.layers[0]
+		layer = GSLayer()
 		glyph.layers[master.id] = layer
 		originX = 0
 		originY = self.descender
