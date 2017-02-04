@@ -213,20 +213,23 @@ class BDFFileFormat(FileFormatPlugin):
 			highesBit = highesBit << 8
 		if columns > 2:
 			highesBit = highesBit << 8
+		layer.setDisableUpdates()
 		for line in file:
 			bit = int(line, 16)
 			for column in range(width):
 				if (bit & highesBit) == highesBit:
 					pixel = GSComponent("pixel")
 					pixel.position = NSPoint((originX + column) * 10, (height - row + originY - 1) * 10)
-					layer.components.append(pixel)
+					layer.addComponentFast_(pixel)
 				bit = bit << 1
 			row += 1
 			if row >= height:
 				break
+		layer.enableFutureUpdates()
 	
-	def readGlyph(self, glyph, file):
-		layer = glyph.layers[0]
+	def readGlyph(self, glyph, master, file):
+		layer = GSLayer() # glyph.layers[0]
+		glyph.layers[master.id] = layer
 		originX = 0
 		originY = self.descender
 		width = self.size
@@ -251,6 +254,8 @@ class BDFFileFormat(FileFormatPlugin):
 				self.readBitmap(layer, originX, originY, width, height, file)
 	
 	def readGlyphs(self, font, file):
+		glyphs = []
+		master = font.masters[0]
 		for line in file:
 			if line.startswith("ENDFONT"):
 				break
@@ -260,18 +265,22 @@ class BDFFileFormat(FileFormatPlugin):
 				# if name.startswith("U+"):
 				# 	name = "uni"+name[2:]
 				glyph.name = name
-				font.glyphs.append(glyph)
-				self.readGlyph(glyph, file)
+				glyphs.append(glyph)
+				glyph.parent = font
+				self.readGlyph(glyph, master, file)
+		font.glyphs.extend(glyphs)
 		self.drawPixel(font)
 	
 	def read(self, filepath, fileType):
 		font = GSFont()
+		font.disableUpdateInterface()
 		try:
 			with open(filepath) as f:
 				self.readFontInfo(font, f)
 				self.readGlyphs(font, f)
 		except:
 			print traceback.format_exc()
+		font.enableUpdateInterface()
 		return font
 	
 	
