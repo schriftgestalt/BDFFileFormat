@@ -237,21 +237,22 @@ class BDFFileFormat(FileFormatPlugin):
 		for line in file:
 			if line.startswith("ENDCHAR"):
 				break
-			if line.startswith("ENCODING"):
+			elif line.startswith("ENCODING"):
 				enc = int(line[9:-1])
 				uni = "%04X" % enc
 				glyph.unicode = uni
-			if line.startswith("DWIDTH"):
+			elif line.startswith("DWIDTH"):
 				width = int(line.split(" ")[1])
 				layer.width = width * 10
-			if line.startswith("BBX"):
+			elif line.startswith("BBX"):
 				elements = line.split(" ")
 				originX = int(elements[3])
 				originY = int(elements[4])
 				width = int(elements[1])
 				height = int(elements[2])
-			if line.startswith("BITMAP"):
+			elif line.startswith("BITMAP"):
 				self.readBitmap(layer, originX, originY, width, height, file)
+				break
 	
 	def readGlyphs(self, font, file):
 		glyphs = []
@@ -261,6 +262,7 @@ class BDFFileFormat(FileFormatPlugin):
 				break
 			if line.startswith("STARTCHAR "):
 				glyph = GSGlyph()
+				glyph.undoManager().disableUndoRegistration()
 				name = line[10:-1]
 				# if name.startswith("U+"):
 				# 	name = "uni"+name[2:]
@@ -268,6 +270,7 @@ class BDFFileFormat(FileFormatPlugin):
 				glyphs.append(glyph)
 				glyph.parent = font
 				self.readGlyph(glyph, master, file)
+				glyph.undoManager().enableUndoRegistration()
 		font.glyphs.extend(glyphs)
 		self.drawPixel(font)
 	
