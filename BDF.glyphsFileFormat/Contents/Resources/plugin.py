@@ -110,7 +110,6 @@ class BDFFileFormat(FileFormatPlugin):
 		f.write("ENDPROPERTIES\n")
 	
 	def writeBitmap(self, layer, originX, originY, width, height, f):
-		print "__originX, originY, width, height", originX, originY, width, height, f
 		pixels = list()
 		columns = int(math.ceil(width / 8.0) * 8)
 		for y in range(height):
@@ -121,10 +120,8 @@ class BDFFileFormat(FileFormatPlugin):
 		for c in layer.components:
 			if c.componentName == "pixel":
 				pos = c.position
-				#print pos
 				row = int(height - round(pos.y / 10.0) + originY) - 1
 				column = int(round(pos.x / 10.0) - originX)
-				#print "__row, co", column, row
 				pixels[row][column] = True
 		f.write("BITMAP\n")
 		for row in pixels:
