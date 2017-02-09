@@ -100,9 +100,14 @@ class BDFFileFormat(FileFormatPlugin):
 		self.count = gcount
 		
 	def writeFontInfo(self, font, f):
+		
+		self.resolution = 75
+		if font.customParameters["BDFresultion"]:
+			self.resolution = int(font.customParameters["BDFresultion"])
+		
 		f.write("STARTFONT 2.1\n")
 		f.write("FONT %s\n" % font.familyName)
-		f.write("SIZE %d 75 75\n" % self.size)
+		f.write("SIZE %d %d %d\n" % (self.size, self.resolution, self.resolution))
 		f.write("FONTBOUNDINGBOX %d %d %d %d\n" % (self.width, self.height, self.originX, self.originY))
 		f.write("STARTPROPERTIES 2\n")
 		f.write("FONT_ASCENT %d\n" % self.ascender)
@@ -150,7 +155,7 @@ class BDFFileFormat(FileFormatPlugin):
 		if len(glyph.unicode) >=4:
 			enc = int(glyph.unicode, 16)
 			f.write("ENCODING %d\n" % enc)
-		f.write("SWIDTH %d 0\n" % (100.0 * layer.width / self.size))
+		f.write("SWIDTH %d 0\n" % ((75 / self.resolution) * 100.0 * layer.width / self.size))
 		f.write("DWIDTH %d 0\n" % round(layer.width / 10.0))
 		
 		minX = 10000
