@@ -132,8 +132,17 @@ class BDFFileFormat(FileFormatPlugin):
 					bits = bits | pin
 				bits = bits << 1
 			bits = bits >> 1
-			f.write("%02X\n" % bits)
-		
+			if columns > 48:
+				f.write("%010X\n" % bits)
+			if columns > 32:
+				f.write("%08X\n" % bits)
+			elif columns > 16:
+				f.write("%06X\n" % bits)
+			elif columns > 8:
+				f.write("%04X\n" % bits)
+			else:
+				f.write("%02X\n" % bits)
+	
 	def writeGlyph(self, glyph, f):
 		layer = glyph.layers[0]
 		
@@ -144,10 +153,10 @@ class BDFFileFormat(FileFormatPlugin):
 		f.write("SWIDTH %d 0\n" % (100.0 * layer.width / self.size))
 		f.write("DWIDTH %d 0\n" % round(layer.width / 10.0))
 		
-		minX = 0
-		minY = self.descender
-		maxX = round(layer.width / 10)
-		maxY = self.size + self.descender
+		minX = 10000
+		minY = 10000
+		maxX = 0
+		maxY = 0
 		bounds = layer.bounds
 		minX = min(minX, NSMinX(bounds) / 10.0)
 		minY = min(minY, NSMinY(bounds) / 10.0)
@@ -176,9 +185,15 @@ class BDFFileFormat(FileFormatPlugin):
 			if line.startswith("FONT "):
 				font.familyName = line[5:-1]
 			elif line.startswith("SIZE "):
-				self.size = int(line.split(" ")[1])
+				size = line.split(" ")
+				self.size = int(size[1])
 				font.upm = self.size * 10
 				font.grid = 10
+				
+				resultion = int(size[2])
+				if resultion != 75:
+					font.customParameters["BDFresultion"] = resultion
+			
 			elif line.startswith("FONT_ASCENT "):
 				self.ascender = int(line.split(" ")[1])
 				master = font.masters[0]
@@ -189,6 +204,34 @@ class BDFFileFormat(FileFormatPlugin):
 				self.descender = int(line.split(" ")[1])
 				master = font.masters[0]
 				master.descender = - self.descender * 10
+			elif line.startswith("FAMILY_NAME "):
+				if font.familyName != "new Font":
+					font.customParameters["postscriptFontName"] = font.familyName
+				font.familyName = line[12:-1].strip("\" ")
+			elif line.startswith("FOUNDRY "):
+				font.manufacturer = line[8:-1].strip("\" ")
+			elif line.startswith("WEIGHT_NAME "):
+				instance = font.instances[0]
+				if instance is None:
+					instance = GSInstance()
+					font.instances.append(instance)
+				instance.name = line[12:-1].strip("\" ")
+			elif line.startswith("COPYRIGHT "):
+				font.copyright = line[10:-1].strip("\" ")
+			elif line.startswith("FONT_VERSION "):
+				versionString = line[13:-1].strip("\" ")
+				try:
+					version = versionString.split(".")
+					font.versionMajor = int(version[0])
+					font.versionMinor = int(version[1])
+				except:
+					pass
+			elif line.startswith("UNDERLINE_POSITION "):
+				master = font.masters[0]
+				master.customParameters["underlinePosition"] = int(line[19:-1]) * 10
+			elif line.startswith("UNDERLINE_THICKNESS "):
+				master = font.masters[0]
+				master.customParameters["underlineThickness"] = int(line[20:-1]) * 10
 	
 	def drawPixel(self, font):
 		pixel = GSGlyph()
