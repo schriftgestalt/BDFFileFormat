@@ -314,6 +314,7 @@ class BDFFileFormat(FileFormatPlugin):
 	def readGlyphs(self, font, file):
 		glyphs = []
 		master = font.masters[0]
+		niceNames = not Glyphs.boolDefaults["ImportKeepGlyphsNames"]
 		for line in file:
 			if line.startswith("ENDFONT"):
 				break
@@ -321,9 +322,14 @@ class BDFFileFormat(FileFormatPlugin):
 				glyph = GSGlyph()
 				glyph.undoManager().disableUndoRegistration()
 				name = line[10:-1]
-				# if name.startswith("U+"):
-				# 	name = "uni"+name[2:]
+				if niceNames:
+					if name.startswith("U+"):
+						name = "uni"+name[2:]
+					newName = Glyphs.niceGlyphName(name)
+					if newName is not None:
+						name = newName
 				glyph.name = name
+				
 				glyphs.append(glyph)
 				glyph.parent = font
 				self.readGlyph(glyph, master, file)
