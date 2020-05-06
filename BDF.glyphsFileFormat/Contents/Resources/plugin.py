@@ -15,9 +15,9 @@
 #
 ###########################################################################################################
 
-
+from GlyphsApp import *
 from GlyphsApp.plugins import *
-import os, traceback, math
+import os, traceback, math, objc
 
 from LaunchServices import LSCopyDefaultRoleHandlerForContentType, LSSetDefaultRoleHandlerForContentType, kLSRolesEditor
 class BDFFileFormat(FileFormatPlugin):
