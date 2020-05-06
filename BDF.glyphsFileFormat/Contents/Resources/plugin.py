@@ -17,9 +17,11 @@
 
 from GlyphsApp import *
 from GlyphsApp.plugins import *
+from GlyphsApp.plugins import pathForResource
 import os, traceback, math, objc
-
+from CoreFoundation import CFSTR, CFStringCompare, CFRelease
 from LaunchServices import LSCopyDefaultRoleHandlerForContentType, LSSetDefaultRoleHandlerForContentType, kLSRolesEditor
+
 class BDFFileFormat(FileFormatPlugin):
 	
 	# Definitions of IBOutlets
