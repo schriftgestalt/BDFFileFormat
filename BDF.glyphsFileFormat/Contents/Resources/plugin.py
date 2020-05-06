@@ -276,6 +276,7 @@ class BDFFileFormat(FileFormatPlugin):
 				if (bit & highesBit) == highesBit:
 					pixel = GSComponent("pixel")
 					pixel.position = NSPoint((originX + column) * 10, (height - row + originY - 1) * 10)
+					pixel.automaticAlignment = False
 					layer.addComponentFast_(pixel)
 				bit = bit << 1
 			row += 1
