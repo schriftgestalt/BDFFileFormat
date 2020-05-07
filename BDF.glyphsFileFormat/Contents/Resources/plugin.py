@@ -154,7 +154,7 @@ class BDFFileFormat(FileFormatPlugin):
 		layer = glyph.layers[0]
 		
 		f.write("STARTCHAR %s\n" % glyph.name)
-		if len(glyph.unicode) >=4:
+		if glyph.unicode and len(glyph.unicode) >=4:
 			enc = int(glyph.unicode, 16)
 			f.write("ENCODING %d\n" % enc)
 		f.write("SWIDTH %d 0\n" % ((75 / self.resolution) * 100.0 * layer.width / self.size))
