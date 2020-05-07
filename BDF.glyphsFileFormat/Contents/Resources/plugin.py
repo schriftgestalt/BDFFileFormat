@@ -15,6 +15,7 @@
 #
 ###########################################################################################################
 
+from __future__ import print_function
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 from GlyphsApp.plugins import pathForResource
@@ -74,10 +75,11 @@ class BDFFileFormat(FileFormatPlugin):
 		return True, None
 	
 	def preExport(self, font):
-		self.size = round(font.upm / 10.0)
+		self.factor = font.grid
+		self.size = round(font.upm / self.factor)
 		master = font.masters[0]
-		self.ascender = round(master.ascender / 10.0)
-		self.descender = round(master.descender / 10.0)
+		self.ascender = round(master.ascender / self.factor)
+		self.descender = round(master.descender / self.factor)
 		
 		minX = 0
 		minY = self.descender
@@ -89,10 +91,10 @@ class BDFFileFormat(FileFormatPlugin):
 				continue
 			l = g.layers[0]
 			bounds = l.bounds
-			minX = min(minX, NSMinX(bounds) / 10.0)
-			minY = min(minY, NSMinY(bounds) / 10.0)
-			maxX = max(maxX, NSMaxX(bounds) / 10.0)
-			maxY = max(maxY, NSMaxY(bounds) / 10.0)
+			minX = min(minX, NSMinX(bounds) / self.factor)
+			minY = min(minY, NSMinY(bounds) / self.factor)
+			maxX = max(maxX, NSMaxX(bounds) / self.factor)
+			maxY = max(maxY, NSMaxY(bounds) / self.factor)
 			gcount += 1
 		
 		self.originX = minX
@@ -104,8 +106,11 @@ class BDFFileFormat(FileFormatPlugin):
 	def writeFontInfo(self, font, f):
 		
 		self.resolution = 75
-		if font.customParameters["BDFresultion"]:
+		if "BDFresultion" in font.customParameters:
 			self.resolution = int(font.customParameters["BDFresultion"])
+		self.pixel = "pixel"
+		if "BDFpixel" in font.customParameters:
+			self.pixel = font.customParameters["BDFpixel"]
 		
 		f.write("STARTFONT 2.1\n")
 		f.write("FONT %s\n" % font.familyName)
@@ -125,10 +130,10 @@ class BDFFileFormat(FileFormatPlugin):
 				row.append(False)
 			pixels.append(row)
 		for c in layer.components:
-			if c.componentName == "pixel":
+			if c.componentName == self.pixel:
 				pos = c.position
-				row = int(height - round(pos.y / 10.0) + originY) - 1
-				column = int(round(pos.x / 10.0) - originX)
+				row = int(height - round(pos.y / self.factor) + originY) - 1
+				column = int(round(pos.x / self.factor) - originX)
 				pixels[row][column] = True
 		f.write("BITMAP\n")
 		for row in pixels:
@@ -158,17 +163,17 @@ class BDFFileFormat(FileFormatPlugin):
 			enc = int(glyph.unicode, 16)
 			f.write("ENCODING %d\n" % enc)
 		f.write("SWIDTH %d 0\n" % ((75 / self.resolution) * 100.0 * layer.width / self.size))
-		f.write("DWIDTH %d 0\n" % round(layer.width / 10.0))
+		f.write("DWIDTH %d 0\n" % round(layer.width / self.factor))
 		
 		minX = 10000
 		minY = 10000
 		maxX = 0
 		maxY = 0
 		bounds = layer.bounds
-		minX = min(minX, NSMinX(bounds) / 10.0)
-		minY = min(minY, NSMinY(bounds) / 10.0)
-		maxX = max(maxX, NSMaxX(bounds) / 10.0)
-		maxY = max(maxY, NSMaxY(bounds) / 10.0)
+		minX = min(minX, NSMinX(bounds) / self.factor)
+		minY = min(minY, NSMinY(bounds) / self.factor)
+		maxX = max(maxX, NSMaxX(bounds) / self.factor)
+		maxY = max(maxY, NSMaxY(bounds) / self.factor)
 		originX = int(minX)
 		originY = int(minY)
 		width = int(maxX - minX)
@@ -345,7 +350,7 @@ class BDFFileFormat(FileFormatPlugin):
 				self.readFontInfo(font, f)
 				self.readGlyphs(font, f)
 		except:
-			print traceback.format_exc()
+			print(traceback.format_exc())
 		font.enableUpdateInterface()
 		return font
 	
