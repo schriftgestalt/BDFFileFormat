@@ -24,40 +24,44 @@ from CoreFoundation import CFSTR, CFStringCompare, CFRelease
 from LaunchServices import LSCopyDefaultRoleHandlerForContentType, LSSetDefaultRoleHandlerForContentType, kLSRolesEditor
 
 class BDFFileFormat(FileFormatPlugin):
-	
+
 	# Definitions of IBOutlets
-	
+
 	# The NSView object from the User Interface. Keep this here!
 	dialog = objc.IBOutlet()
-	
+
 	# Example variables. You may delete them
 	feedbackTextField = objc.IBOutlet()
 	unicodeCheckBox = objc.IBOutlet()
 	glyphWidthCheckbox = objc.IBOutlet()
-	
+
+	@objc.python_method
 	def settings(self):
 		self.name = "BDF"
 		self.icon = 'ExportIcon'
 		self.toolbarPosition = 200
-		
+
 		# Load .nib dialog (with .extension)
 		self.loadNib('IBdialog', __file__)
-	
+
+	@objc.python_method
 	def start(self):
 		Command = "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister";
 		appPath = pathForResource("BDFApp", "app", __file__)
 		Command += " \""+appPath+"\""
 		os.system(Command)
-		
-		handler = LSCopyDefaultRoleHandlerForContentType(CFSTR("org.x.bdf"), kLSRolesEditor);
-		if not handler or CFStringCompare(handler, CFSTR("com.georgseifert.glyphs2"), 0):
-			LSSetDefaultRoleHandlerForContentType(CFSTR("org.x.bdf"), kLSRolesEditor, CFSTR("com.georgseifert.glyphs2"))
-		
+
+		handler = LSCopyDefaultRoleHandlerForContentType(CFSTR("org.x.bdf"), kLSRolesEditor)
+		identifier = NSBundle.mainBundle().bundleIdentifier()
+		if not handler or CFStringCompare(handler, CFSTR(identifier), 0):
+			LSSetDefaultRoleHandlerForContentType(CFSTR("org.x.bdf"), kLSRolesEditor, CFSTR(identifier))
+
 		if handler:
 			CFRelease(handler)
-	
+
+	@objc.python_method
 	def export(self, font, filepath = None):
-		
+
 		if filepath is None:
 			# Ask for export destination and write the file:
 			title = "Choose export destination"
@@ -65,22 +69,23 @@ class BDFFileFormat(FileFormatPlugin):
 			fileTypes = ['bdf']
 			# Call dialog
 			filepath = GetSaveFile(title, proposedFilename, fileTypes)
-		
+
 		self.preExport(font)
-		
+
 		with open(filepath, "w") as f:
 			self.writeFontInfo(font, f)
 			self.writeGlyphs(font, f)
 			f.write("ENDFONT")
 		return True, None
-	
+
+	@objc.python_method
 	def preExport(self, font):
 		self.factor = font.grid
 		self.size = round(font.upm / self.factor)
 		master = font.masters[0]
 		self.ascender = round(master.ascender / self.factor)
 		self.descender = round(master.descender / self.factor)
-		
+
 		minX = 0
 		minY = self.descender
 		maxX = self.size
@@ -96,22 +101,23 @@ class BDFFileFormat(FileFormatPlugin):
 			maxX = max(maxX, NSMaxX(bounds) / self.factor)
 			maxY = max(maxY, NSMaxY(bounds) / self.factor)
 			gcount += 1
-		
+
 		self.originX = minX
 		self.originY = minY
 		self.width = maxX - minX
 		self.height = maxY - minY
 		self.count = gcount
-		
+
+	@objc.python_method
 	def writeFontInfo(self, font, f):
-		
+
 		self.resolution = 75
 		if "BDFresultion" in font.customParameters:
 			self.resolution = int(font.customParameters["BDFresultion"])
 		self.pixel = "pixel"
 		if "BDFpixel" in font.customParameters:
 			self.pixel = font.customParameters["BDFpixel"]
-		
+
 		f.write("STARTFONT 2.1\n")
 		f.write("FONT %s\n" % font.familyName)
 		f.write("SIZE %d %d %d\n" % (self.size, self.resolution, self.resolution))
@@ -120,7 +126,8 @@ class BDFFileFormat(FileFormatPlugin):
 		f.write("FONT_ASCENT %d\n" % self.ascender)
 		f.write("FONT_DESCENT %d\n" % abs(self.descender))
 		f.write("ENDPROPERTIES\n")
-	
+
+	@objc.python_method
 	def writeBitmap(self, layer, originX, originY, width, height, f):
 		pixels = list()
 		columns = int(math.ceil(width / 8.0) * 8)
@@ -154,17 +161,18 @@ class BDFFileFormat(FileFormatPlugin):
 				f.write("%04X\n" % bits)
 			else:
 				f.write("%02X\n" % bits)
-	
+
+	@objc.python_method
 	def writeGlyph(self, glyph, f):
 		layer = glyph.layers[0]
-		
+
 		f.write("STARTCHAR %s\n" % glyph.name)
 		if glyph.unicode and len(glyph.unicode) >=4:
 			enc = int(glyph.unicode, 16)
 			f.write("ENCODING %d\n" % enc)
 		f.write("SWIDTH %d 0\n" % ((75 / self.resolution) * 100.0 * layer.width / self.size))
 		f.write("DWIDTH %d 0\n" % round(layer.width / self.factor))
-		
+
 		minX = 10000
 		minY = 10000
 		maxX = 0
@@ -181,15 +189,16 @@ class BDFFileFormat(FileFormatPlugin):
 		f.write("BBX %d %d %d %d\n" % (width, height, originX, originY))
 		self.writeBitmap(layer, originX, originY, width, height, f)
 		f.write("ENDCHAR\n")
-	
+
+	@objc.python_method
 	def writeGlyphs(self, font, file):
 		file.write("CHARS %d\n" % self.count)
 		for g in font.glyphs:
 			if not g.export:
 				continue
 			self.writeGlyph(g, file)
-		
-	
+
+	@objc.python_method
 	def readFontInfo(self, font, file):
 		for line in file:
 			if line.startswith("ENDPROPERTIES"):
@@ -201,11 +210,11 @@ class BDFFileFormat(FileFormatPlugin):
 				self.size = int(size[1])
 				font.upm = self.size * 10
 				font.grid = 10
-				
+
 				resultion = int(size[2])
 				if resultion != 75:
 					font.customParameters["BDFresultion"] = resultion
-			
+
 			elif line.startswith("FONT_ASCENT "):
 				self.ascender = int(line.split(" ")[1])
 				master = font.masters[0]
@@ -244,7 +253,8 @@ class BDFFileFormat(FileFormatPlugin):
 			elif line.startswith("UNDERLINE_THICKNESS "):
 				master = font.masters[0]
 				master.customParameters["underlineThickness"] = int(line[20:-1]) * 10
-	
+
+	@objc.python_method
 	def drawPixel(self, font):
 		pixel = GSGlyph()
 		pixel.name = "pixel"
@@ -253,7 +263,7 @@ class BDFFileFormat(FileFormatPlugin):
 		layer = pixel.layers[0]
 		layer.width = 10
 		path = GSPath()
-		
+
 		Node = GSNode(NSPoint(10, 0), LINE)
 		path.nodes.append(Node)
 		Node = GSNode(NSPoint(10, 10), LINE)
@@ -262,10 +272,11 @@ class BDFFileFormat(FileFormatPlugin):
 		path.nodes.append(Node)
 		Node = GSNode(NSPoint(0, 0), LINE)
 		path.nodes.append(Node)
-		
+
 		path.closed = True
 		layer.paths.append(path)
-	
+
+	@objc.python_method
 	def readBitmap(self, layer, originX, originY, width, height, file):
 		row = 0
 		columns = math.ceil(width / 8.0)
@@ -282,13 +293,14 @@ class BDFFileFormat(FileFormatPlugin):
 					pixel = GSComponent("pixel")
 					pixel.position = NSPoint((originX + column) * 10, (height - row + originY - 1) * 10)
 					pixel.automaticAlignment = False
-					layer.addComponentFast_(pixel)
+					layer.components.append(pixel)
 				bit = bit << 1
 			row += 1
 			if row >= height:
 				break
 		layer.enableFutureUpdates()
-	
+
+	@objc.python_method
 	def readGlyph(self, glyph, master, file):
 		layer = GSLayer()
 		glyph.layers[master.id] = layer
@@ -315,7 +327,8 @@ class BDFFileFormat(FileFormatPlugin):
 			elif line.startswith("BITMAP"):
 				self.readBitmap(layer, originX, originY, width, height, file)
 				break
-	
+
+	@objc.python_method
 	def readGlyphs(self, font, file):
 		glyphs = []
 		master = font.masters[0]
@@ -334,27 +347,25 @@ class BDFFileFormat(FileFormatPlugin):
 					if newName is not None:
 						name = newName
 				glyph.name = name
-				
+
 				glyphs.append(glyph)
 				glyph.parent = font
 				self.readGlyph(glyph, master, file)
 				glyph.undoManager().enableUndoRegistration()
 		font.glyphs.extend(glyphs)
 		self.drawPixel(font)
-	
+
+	@objc.python_method
 	def read(self, filepath, fileType):
 		font = GSFont()
 		font.disableUpdateInterface()
-		try:
-			with open(filepath) as f:
-				self.readFontInfo(font, f)
-				self.readGlyphs(font, f)
-		except:
-			print(traceback.format_exc())
+		with open(filepath) as f:
+			self.readFontInfo(font, f)
+			self.readGlyphs(font, f)
 		font.enableUpdateInterface()
 		return font
-	
-	
+
+	@objc.python_method
 	def __file__(self):
 		"""Please leave this method unchanged"""
 		return __file__
